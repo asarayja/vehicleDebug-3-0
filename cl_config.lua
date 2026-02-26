@@ -32,6 +32,11 @@ Config.AllowedLicenses = {
 -- Message shown client-side to players not on the allowlist.
 Config.AccessDeniedMessage = "Du har ikke tilgang til Vehicle Debugger."
 
+-- ── DEBUG ─────────────────────────────────────────────────────────
+-- Set to true to enable verbose logging in F8 and server console.
+-- Set to false in production to suppress routine messages.
+Config.Debug = false
+
 -- ── UI / GENERAL SETTINGS ─────────────────────────────────────────
 -- Keybind for Legacy UI open/close.
 -- Full reference: https://docs.fivem.net/docs/game-references/input-mapper-parameter-ids/keyboard/

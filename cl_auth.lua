@@ -44,10 +44,12 @@ end
 RegisterNetEvent("vehdebug:authResult", function(allowed)
 	ClientAuth._allowed = (allowed == true)
 
-	if ClientAuth._allowed then
-		print("[VehDebug/ClientAuth] Tilgang innvilget.")
-	else
-		print("[VehDebug/ClientAuth] Tilgang nektet.")
+	if Config.Debug then
+		if ClientAuth._allowed then
+			print("[VehDebug/ClientAuth] Tilgang innvilget.")
+		else
+			print("[VehDebug/ClientAuth] Tilgang nektet.")
+		end
 	end
 end)
 

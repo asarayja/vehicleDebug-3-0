@@ -35,7 +35,9 @@ local function buildAllowedSet()
 		_allowedSet[license:lower()] = true
 		count = count + 1
 	end
-	print(("[VehDebug/Security] Allowlist geladen: %d lisensnummer(e) registrert."):format(count))
+	if SvConfig.Debug then
+		print(("[VehDebug/Security] Allowlist geladen: %d lisensnummer(e) registrert."):format(count))
+	end
 end
 
 -- Build immediately when script loads.
@@ -64,6 +66,7 @@ function Security.IsAllowed(source)
 	local license = GetPlayerIdentifierByType(tostring(source), "license")
 
 	if not license or license == "" then
+		-- Always log: missing license may indicate spoofing or a misconfigured client
 		print(("[VehDebug/Security] ADVARSEL: Spiller %s har ingen license-identifikator."):format(tostring(source)))
 		return false, nil
 	end

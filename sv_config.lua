@@ -24,9 +24,15 @@ SvConfig = {}
 -- Must match Config.AllowedLicenses in cl_config.lua exactly.
 -- Format: "license:<40-character hex string>"
 SvConfig.AllowedLicenses = {
-	 --"license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-	 --"license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+	 "license:da273a5e3a2bf99fd5c1e9a1f33f8ea4d8f352cb",
+	 "license:27d2c08d1254dd0dc94054ae01408ae74b96e617",
 }
 
 -- Message sent to the client when a server-side check rejects a request.
 SvConfig.AccessDeniedMessage = "Du har ikke tilgang til Vehicle Debugger."
+
+-- ── DEBUG ─────────────────────────────────────────────────────────
+-- Set to true to enable verbose logging in the server console.
+-- Set to false in production to suppress routine messages.
+-- Must match Config.Debug in cl_config.lua.
+SvConfig.Debug = false

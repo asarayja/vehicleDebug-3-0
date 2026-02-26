@@ -64,7 +64,9 @@ function ModernUI:BuildFieldData(vehicle)
 					description = field.description or "No description available.",
 				}
 			else
-				print("[VehicleDebug/Modern] WARNING: Could not read field " .. field.name)
+				if Config.Debug then
+					print("[VehicleDebug/Modern] WARNING: Could not read field " .. field.name)
+				end
 			end
 		end
 	end
@@ -194,7 +196,7 @@ function ModernUI:SavePreset(name)
 	end
 
 	self:Invoke("presetsUpdated", { presets = self.presets })
-	print("[VehicleDebug/Modern] Preset saved: " .. name)
+	if Config.Debug then print("[VehicleDebug/Modern] Preset saved: " .. name) end
 end
 
 function ModernUI:LoadPreset(name)
@@ -209,7 +211,7 @@ function ModernUI:LoadPreset(name)
 			self:Invoke("refreshValues", {
 				fields = self:BuildFieldData(self.vehicle),
 			})
-			print("[VehicleDebug/Modern] Preset loaded: " .. name)
+			if Config.Debug then print("[VehicleDebug/Modern] Preset loaded: " .. name) end
 			return
 		end
 	end

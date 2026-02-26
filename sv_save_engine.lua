@@ -74,9 +74,9 @@ local function scanResource(resourceName)
 								relativePath = subPath,
 								absolutePath = absolutePath,
 							}
-							print(("[VehDebug/SaveEngine] Cached: %s → %s/%s"):format(
+							if SvConfig.Debug then print(("[VehDebug/SaveEngine] Cached: %s → %s/%s"):format(
 								modelName, resourceName, subPath
-							))
+							)) end
 						end
 					end
 				end
@@ -93,7 +93,7 @@ end
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]]
 function SaveEngine.BuildCache()
 	local total = GetNumResources()
-	print(("[VehDebug/SaveEngine] Starting cache build. %d resources to scan."):format(total))
+	if SvConfig.Debug then print(("[VehDebug/SaveEngine] Starting cache build. %d resources to scan."):format(total)) end
 
 	local scanned = 0
 	Citizen.CreateThread(function()
@@ -114,7 +114,7 @@ function SaveEngine.BuildCache()
 		SaveEngine.cacheBuilt = true
 		local count = 0
 		for _ in pairs(SaveEngine.cache) do count = count + 1 end
-		print(("[VehDebug/SaveEngine] Cache build complete. %d models indexed."):format(count))
+		if SvConfig.Debug then print(("[VehDebug/SaveEngine] Cache build complete. %d models indexed."):format(count)) end
 	end)
 end
 
@@ -136,14 +136,14 @@ function SaveEngine.FindHandlingFile(modelName)
 	end
 
 	-- Slow path: live scan (handles resources added after startup)
-	print(("[VehDebug/SaveEngine] Cache miss for '%s' — live scan starting."):format(key))
+	if SvConfig.Debug then print(("[VehDebug/SaveEngine] Cache miss for '%s' — live scan starting."):format(key)) end
 	local total = GetNumResources()
 	for i = 0, total - 1 do
 		local resName = GetResourceByFindIndex(i)
 		if resName and resName ~= "" and GetResourceState(resName) == "started" then
 			pcall(scanResource, resName)
 			if SaveEngine.cache[key] then
-				print(("[VehDebug/SaveEngine] Found '%s' in '%s' via live scan."):format(key, resName))
+				if SvConfig.Debug then print(("[VehDebug/SaveEngine] Found '%s' in '%s' via live scan."):format(key, resName)) end
 				return SaveEngine.cache[key]
 			end
 		end
@@ -163,7 +163,7 @@ local function writeBackup(entry, originalContent)
 	local bakPath = entry.relativePath .. ".bak"
 	local ok = SaveResourceFile(entry.resourceName, bakPath, originalContent, -1)
 	if ok then
-		print(("[VehDebug/SaveEngine] Backup written: %s/%s"):format(entry.resourceName, bakPath))
+		if SvConfig.Debug then print(("[VehDebug/SaveEngine] Backup written: %s/%s"):format(entry.resourceName, bakPath)) end
 	else
 		print(("[VehDebug/SaveEngine] WARNING: Backup FAILED for %s/%s"):format(entry.resourceName, bakPath))
 	end
@@ -331,9 +331,9 @@ function SaveEngine.SaveHandling(modelName, handlingTable)
 		return false, msg
 	end
 
-	print(("[VehDebug/SaveEngine] Saving '%s' → %s/%s"):format(
+	if SvConfig.Debug then print(("[VehDebug/SaveEngine] Saving '%s' → %s/%s"):format(
 		modelName, entry.resourceName, entry.relativePath
-	))
+	)) end
 
 	-- 2. Read current file content
 	local content = LoadResourceFile(entry.resourceName, entry.relativePath)
@@ -387,7 +387,7 @@ function SaveEngine.InvalidateResource(resourceName)
 		end
 	end
 	if removed > 0 then
-		print(("[VehDebug/SaveEngine] Invalidated %d cache entries for resource '%s'"):format(removed, resourceName))
+		if SvConfig.Debug then print(("[VehDebug/SaveEngine] Invalidated %d cache entries for resource '%s'"):format(removed, resourceName)) end
 	end
 	-- Re-scan immediately
 	pcall(scanResource, resourceName)

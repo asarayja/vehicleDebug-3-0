@@ -74,9 +74,11 @@ local function collectHandlingData(vehicle)
 					value = serialised,
 				}
 			else
-				print(("[VehDebug/SaveBridge] Could not read field '%s': %s"):format(
-					field.name, tostring(value)
-				))
+				if Config.Debug then
+					print(("[VehDebug/SaveBridge] Could not read field '%s': %s"):format(
+						field.name, tostring(value)
+					))
+				end
 			end
 		end
 	end
@@ -110,9 +112,11 @@ function SaveBridge.Save(vehicle, uiSource)
 	-- Record which UI is waiting so the result handler can notify it
 	SaveBridge._pendingSource = uiSource
 
-	print(("[VehDebug/SaveBridge] Sending save for '%s' (%d fields) from %s UI"):format(
-		modelName, #handlingData, uiSource
-	))
+	if Config.Debug then
+		print(("[VehDebug/SaveBridge] Sending save for '%s' (%d fields) from %s UI"):format(
+			modelName, #handlingData, uiSource
+		))
+	end
 
 	TriggerServerEvent("vehdebug:saveHandling", modelName, handlingData)
 end
@@ -133,8 +137,10 @@ function SaveBridge._deliverResult(uiSource, success, message)
 	})
 
 	-- Also print to F8 for debugging
-	local prefix = success and "[OK]" or "[FAIL]"
-	print(("[VehDebug/SaveBridge] %s %s"):format(prefix, message))
+	if Config.Debug then
+		local prefix = success and "[OK]" or "[FAIL]"
+		print(("[VehDebug/SaveBridge] %s %s"):format(prefix, message))
+	end
 end
 
 --[[ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -177,6 +183,7 @@ end)
      EVENT: Cache status debug response
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]]
 RegisterNetEvent("vehdebug:cacheStatus", function(text)
+	-- Always print: this event is only fired when explicitly requested via /vehdebug_cachestatus
 	print("[VehDebug/CacheStatus]\n" .. text)
 end)
 
