@@ -1,24 +1,1049 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" href="index.css">
-		<script src="index.js"></script>
-	</head>
-	<body>
-		<textarea id="clipboard"></textarea>
-		<div id="content">
-			<div id="statistics">
-				<span>Top Speed: </span><span id="top-speed"></span><br>
-				<span>Top Acceleration: </span><span id="top-accel"></span><br>
-				<span>Top Deceleration: </span><span id="top-decel"></span><br>
-			</div>
-			<div id="handling" style="display: none">
-				<button onclick="copyHandling()">Copy Handling</button>
-				<button onclick="post('resetStats')">Reset Stats</button>
-				<div id="handling-fields"></div>
-			</div>
-		</div>
-	</body>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vehicle Handling</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@600;700;800&display=swap');
+
+  :root {
+    --bg:        #0a0b0d;
+    --surface:   #111318;
+    --surface2:  #181c23;
+    --border:    #232731;
+    --accent:    #ff3333;
+    --accent2:   #ff6b6b;
+    --accent-hover: #e02020;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --danger:    #ff4747;
+    --radius:    8px;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-mono);
+    background: transparent;
+    color: var(--text);
+    user-select: none;
+    overflow: hidden;
+  }
+
+  /* ── OVERLAY ─────────────────────────────────────────── */
+  #modern-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 9000;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 3vh 0;
+  }
+  #modern-overlay.visible { display: flex; }
+
+  /* ── PANEL ───────────────────────────────────────────── */
+  #modern-panel {
+    width: min(92vw, 860px);
+    max-height: 94vh;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,51,51,0.05);
+    animation: slideIn 0.18s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ── HEADER ──────────────────────────────────────────── */
+  #modern-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-badge {
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  #modern-vehicle-name {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+
+  /* ── TOOLBAR ─────────────────────────────────────────── */
+  #modern-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .toolbar-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 2px;
+  }
+
+  /* ── CATEGORY TABS ───────────────────────────────────── */
+  #modern-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 10px 20px 0;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #modern-tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 6px 14px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── SCROLL BODY ─────────────────────────────────────── */
+  #modern-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* ── CATEGORY SECTION ────────────────────────────────── */
+  .cat-section { display: none; }
+  .cat-section.active { display: block; }
+
+  /* ── FIELD GRID ──────────────────────────────────────── */
+  .fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 10px;
+  }
+
+  /* ── FIELD CARD ──────────────────────────────────────── */
+  .field-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    transition: border-color 0.15s;
+    position: relative;
+  }
+  .field-card:hover { border-color: #2e3545; }
+  .field-card.changed { border-color: rgba(255,51,51,0.35); }
+
+  .field-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .field-name span.label { color: var(--text); font-size: 12px; }
+  .field-type-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* info icon */
+  .info-icon {
+    margin-left: auto;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .info-icon:hover { background: var(--accent); color: #fff; }
+
+  /* tooltip */
+  .field-tooltip {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    left: 0; right: 0;
+    bottom: calc(100% + 6px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.6;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  .field-tooltip.show { display: block; }
+
+  /* ── SLIDER ROW ──────────────────────────────────────── */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slider-wrap {
+    flex: 1;
+    position: relative;
+    height: 18px;
+    display: flex;
+    align-items: center;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    transition: transform 0.1s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  /* filled track via gradient */
+  input[type="range"].filled-track {
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val-pct, 50%), var(--surface2) var(--val-pct, 50%));
+  }
+
+  /* ── NUMERIC INPUT ───────────────────────────────────── */
+  .num-input {
+    width: 80px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+    user-select: text;
+  }
+  .num-input:focus { border-color: var(--accent); }
+
+  /* Vector inputs */
+  .vector-row {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr 1fr;
+    gap: 6px;
+    align-items: center;
+  }
+  .axis-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .vec-input {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+    user-select: text;
+    width: 100%;
+  }
+  .vec-input:focus { border-color: var(--accent2); }
+
+  /* Fine step toggle */
+  .step-toggle {
+    font-size: 9px;
+    padding: 2px 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: var(--font-mono);
+  }
+  .step-toggle.active { background: rgba(255,51,51,0.12); color: var(--accent); border-color: var(--accent); }
+
+  /* ── BUTTONS ─────────────────────────────────────────── */
+  .btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: #1e232e; }
+  .btn-danger {
+    background: rgba(255,71,71,0.12);
+    color: var(--danger);
+    border: 1px solid rgba(255,71,71,0.3);
+  }
+  .btn-danger:hover { background: rgba(255,71,71,0.22); }
+  .btn-close {
+    width: 28px; height: 28px;
+    padding: 0;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .btn-close:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+  /* ── PRESETS PANEL ───────────────────────────────────── */
+  #presets-panel {
+    display: none;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  #presets-panel.open { display: block; }
+  .presets-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .presets-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+    min-height: 28px;
+  }
+  .preset-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .preset-chip:hover { border-color: var(--accent); }
+  .preset-chip .del-btn {
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .preset-chip .del-btn:hover { color: var(--danger); }
+  .preset-save-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .preset-name-input {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+    color: var(--text);
+    outline: none;
+    user-select: text;
+    flex: 1;
+    max-width: 220px;
+  }
+  .preset-name-input:focus { border-color: var(--accent); }
+
+  /* ── STATUS BAR ──────────────────────────────────────── */
+  #modern-status {
+    padding: 8px 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  #modern-status .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .status-hint { margin-left: auto; }
+
+  /* ── EMPTY STATE ─────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Legacy UI clipboard textarea (used by both UIs) -->
+<textarea id="clipboard" style="position:absolute;color:transparent;background:transparent;border:transparent;outline:transparent;pointer-events:none;resize:none;"></textarea>
+
+<!-- ══ LEGACY UI ═══════════════════════════════════════════════════════ -->
+<div id="content" style="display:none; position:absolute; left:50vw; top:6vmin; padding:0; margin:0; tab-size:0; max-height:80vh; transform:translate(-50%,0%);">
+  <div id="statistics">
+    <span>Top Speed: </span><span id="top-speed"></span><br>
+    <span>Top Acceleration: </span><span id="top-accel"></span><br>
+    <span>Top Deceleration: </span><span id="top-decel"></span><br>
+  </div>
+  <div id="handling" style="display:none">
+    <button onclick="copyHandling()">Copy Handling</button>
+    <button onclick="post('resetStats')">Reset Stats</button>
+    <button onclick="legacySaveHandling()" id="legacy-save-btn">💾 Save to File</button>
+    <span id="legacy-save-status" style="font-size:1.2vmin; margin-left:0.5vmin;"></span>
+    <div id="handling-fields"></div>
+  </div>
+</div>
+
+<!-- ══ MODERN UI ══════════════════════════════════════════════════════ -->
+<div id="modern-overlay">
+  <div id="modern-panel">
+
+    <!-- Header -->
+    <div id="modern-header">
+      <div class="header-left">
+        <div class="header-badge">Handling</div>
+        <div id="modern-vehicle-name">No Vehicle</div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary" onclick="togglePresets()">⊞ Presets</button>
+        <button class="btn btn-secondary" onclick="modernResetOriginal()">↺ Reset</button>
+        <button class="btn btn-secondary" onclick="modernCopyHandling()">⎘ Copy XML</button>
+        <button class="btn btn-primary" id="modern-save-btn" onclick="modernSaveHandling()">💾 Save to File</button>
+        <button class="btn-close btn" onclick="modernClose()">✕</button>
+      </div>
+    </div>
+
+    <!-- Category Tabs -->
+    <div id="modern-tabs"></div>
+
+    <!-- Scrollable Body -->
+    <div id="modern-body">
+      <!-- Sections injected here by JS -->
+    </div>
+
+    <!-- Presets Panel -->
+    <div id="presets-panel">
+      <div class="presets-header">Saved Presets</div>
+      <div class="presets-list" id="presets-list">
+        <span style="color:var(--muted);font-size:11px;">No presets saved.</span>
+      </div>
+      <div class="preset-save-row">
+        <input class="preset-name-input" id="preset-name-input" type="text" placeholder="Preset name…" maxlength="32">
+        <button class="btn btn-primary" onclick="savePreset()">Save Current</button>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="modern-status">
+      <div class="status-dot"></div>
+      <span id="status-text">Live editing active</span>
+      <span class="status-hint">Changes apply instantly · /vehiclehandling to close</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  SHARED STATE
+// ═══════════════════════════════════════════════════════════════════
+let modernFields = [];       // Array of field objects
+let currentCategory = null;
+let presetsOpen = false;
+let fineStepMap = {};        // key -> bool (fine step active)
+let changeMap = {};          // key -> bool (value changed from original)
+
+const DEBOUNCE_MS = 80;      // ms to debounce handleing updates
+let debounceTimers = {};
+
+// ═══════════════════════════════════════════════════════════════════
+//  LEGACY UI HANDLERS (unchanged)
+// ═══════════════════════════════════════════════════════════════════
+window.addEventListener("message", function(event) {
+  const data = event.data;
+
+  // Legacy callbacks
+  if (data.callback) {
+    const func = window[data.callback.type];
+    if (func) func(data.callback.data);
+  }
+
+  // Modern callbacks
+  if (data.modernCallback) {
+    const fn = modernHandlers[data.modernCallback.type];
+    if (fn) fn(data.modernCallback.data);
+  }
+});
+
+function post(type, data) {
+  try {
+    fetch(`https://${GetParentResourceName()}/${type}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify(data || {})
+    });
+  } catch(_) {}
+}
+
+function setFocus(value) {
+  document.querySelector("#handling").style.display = value ? "block" : "none";
+}
+
+function updateText(data) {
+  for (var x in data) {
+    const el = document.querySelector(`#${x}`);
+    if (el) el.innerHTML = data[x];
+  }
+}
+
+function copyText(text) {
+  const el = document.querySelector("#clipboard");
+  el.value = text;
+  el.select();
+  el.setSelectionRange(0, 99999);
+  document.execCommand("copy");
+  el.value = "";
+}
+
+function toggle(value) {
+  document.querySelector("#content").style.display = value ? "block" : "none";
+}
+
+function legacySaveHandling() {
+  const btn = document.getElementById("legacy-save-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  post("legacySaveHandling");
+}
+
+function modernSaveHandling() {
+  const btn = document.getElementById("modern-save-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  post("modernSaveHandling");
+  showStatus("Saving to file…");
+}
+
+function copyHandling() { post("copyHandling"); }
+
+function updateHandling(key, value) {
+  post("updateHandling", { key, value });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODERN UI – NUI HANDLERS
+// ═══════════════════════════════════════════════════════════════════
+const modernHandlers = {
+  open(data) {
+    modernFields = data.fields || [];
+    document.getElementById("modern-vehicle-name").textContent = data.modelName || "Unknown";
+    renderModernUI(modernFields);
+    if (data.presets) renderPresets(data.presets);
+    document.getElementById("modern-overlay").classList.add("visible");
+    changeMap = {};
+  },
+
+  close() {
+    document.getElementById("modern-overlay").classList.remove("visible");
+    modernFields = [];
+  },
+
+  refreshValues(data) {
+    // Re-render with new values (after reset or preset load)
+    if (data.fields) {
+      modernFields = data.fields;
+      // Update individual input values without full re-render
+      data.fields.forEach(f => {
+        if (f.type === 'vector') {
+          const xi = document.getElementById(`vec-x-${f.key}`);
+          const yi = document.getElementById(`vec-y-${f.key}`);
+          const zi = document.getElementById(`vec-z-${f.key}`);
+          if (xi && f.value) { xi.value = f.value.x; yi.value = f.value.y; zi.value = f.value.z; }
+        } else {
+          const inp = document.getElementById(`num-${f.key}`);
+          const slid = document.getElementById(`slider-${f.key}`);
+          if (inp) inp.value = f.value;
+          if (slid) { slid.value = f.value; updateSliderTrack(slid, f); }
+        }
+        // Clear changed state
+        changeMap[f.key] = false;
+        const card = document.getElementById(`card-${f.key}`);
+        if (card) card.classList.remove('changed');
+      });
+    }
+  },
+
+  // Save result from server (routed from cl_save_bridge.lua)
+  saveResult(data) {
+    const success = data.success;
+    const msg     = data.message || "";
+    const src     = data.source;   // "legacy" | "modern"
+
+    if (src === "legacy") {
+      const statusEl = document.getElementById("legacy-save-status");
+      const btnEl    = document.getElementById("legacy-save-btn");
+      if (statusEl) {
+        statusEl.textContent = success ? "✔ Saved!" : "✘ " + msg;
+        statusEl.style.color = success ? "#7fff7f" : "#ff7f7f";
+        setTimeout(() => { statusEl.textContent = ""; }, 4000);
+      }
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.textContent = "💾 Save to File";
+      }
+    }
+
+    if (src === "modern" || !src) {
+      showStatus(success ? ("✔ " + msg) : ("✘ " + msg));
+      const btnEl = document.getElementById("modern-save-btn");
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.textContent = "💾 Save to File";
+        btnEl.style.background = success ? "var(--accent)" : "var(--danger)";
+        setTimeout(() => { btnEl.style.background = ""; }, 3000);
+      }
+    }
+  },
+
+  presetsUpdated(data) {
+    renderPresets(data.presets || []);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER MODERN UI
+// ═══════════════════════════════════════════════════════════════════
+function renderModernUI(fields) {
+  // Collect unique categories
+  const categories = [];
+  fields.forEach(f => {
+    if (!categories.includes(f.category)) categories.push(f.category);
+  });
+
+  // Build tabs
+  const tabsEl = document.getElementById("modern-tabs");
+  tabsEl.innerHTML = "";
+  categories.forEach((cat, i) => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (i === 0 ? " active" : "");
+    btn.textContent = cat;
+    btn.dataset.cat = cat;
+    btn.addEventListener("click", () => switchCategory(cat));
+    tabsEl.appendChild(btn);
+  });
+
+  // Build body sections
+  const body = document.getElementById("modern-body");
+  body.innerHTML = "";
+
+  categories.forEach((cat, i) => {
+    const section = document.createElement("div");
+    section.className = "cat-section" + (i === 0 ? " active" : "");
+    section.id = `cat-${sanitizeId(cat)}`;
+
+    const grid = document.createElement("div");
+    grid.className = "fields-grid";
+
+    fields.filter(f => f.category === cat).forEach(f => {
+      grid.appendChild(buildFieldCard(f));
+    });
+
+    section.appendChild(grid);
+    body.appendChild(section);
+  });
+
+  if (categories.length > 0) currentCategory = categories[0];
+}
+
+function switchCategory(cat) {
+  currentCategory = cat;
+  document.querySelectorAll(".tab-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.cat === cat);
+  });
+  document.querySelectorAll(".cat-section").forEach(s => {
+    s.classList.toggle("active", s.id === `cat-${sanitizeId(cat)}`);
+  });
+}
+
+function sanitizeId(str) {
+  return str.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9\-]/g, "").toLowerCase();
+}
+
+function buildFieldCard(f) {
+  const card = document.createElement("div");
+  card.className = "field-card";
+  card.id = `card-${f.key}`;
+
+  // Header row
+  const nameRow = document.createElement("div");
+  nameRow.className = "field-name";
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "label";
+  labelEl.textContent = f.name;
+
+  const typeEl = document.createElement("span");
+  typeEl.className = "field-type-badge";
+  typeEl.textContent = f.type;
+
+  const infoBtn = document.createElement("div");
+  infoBtn.className = "info-icon";
+  infoBtn.textContent = "i";
+  infoBtn.addEventListener("click", () => tooltipEl.classList.toggle("show"));
+
+  nameRow.appendChild(labelEl);
+  nameRow.appendChild(typeEl);
+  nameRow.appendChild(infoBtn);
+  card.appendChild(nameRow);
+
+  // Tooltip
+  const tooltipEl = document.createElement("div");
+  tooltipEl.className = "field-tooltip";
+  // Strip HTML tags from description for clean display
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = f.description || "No description.";
+  tooltipEl.textContent = tempDiv.textContent || "No description.";
+  card.appendChild(tooltipEl);
+
+  // Control row
+  if (f.type === "vector") {
+    card.appendChild(buildVectorControl(f));
+  } else {
+    card.appendChild(buildSliderControl(f));
+  }
+
+  return card;
+}
+
+function buildSliderControl(f) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.gap = "6px";
+
+  const row = document.createElement("div");
+  row.className = "slider-row";
+
+  // Slider
+  const sliderWrap = document.createElement("div");
+  sliderWrap.className = "slider-wrap";
+
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.id = `slider-${f.key}`;
+  slider.className = "filled-track";
+  slider.min = f.min !== undefined ? f.min : 0;
+  slider.max = f.max !== undefined ? f.max : 100;
+  slider.step = f.step !== undefined ? f.step : 0.01;
+  slider.value = f.value !== undefined ? f.value : 0;
+  updateSliderTrack(slider, f);
+  sliderWrap.appendChild(slider);
+
+  // Numeric input
+  const numInput = document.createElement("input");
+  numInput.type = "number";
+  numInput.className = "num-input";
+  numInput.id = `num-${f.key}`;
+  numInput.value = f.value !== undefined ? f.value : 0;
+  numInput.step = f.step !== undefined ? f.step : 0.01;
+
+  // Fine step toggle
+  const stepBtn = document.createElement("button");
+  stepBtn.className = "step-toggle btn";
+  stepBtn.textContent = "±0.01";
+  stepBtn.title = "Toggle fine step mode";
+  stepBtn.addEventListener("click", () => {
+    fineStepMap[f.key] = !fineStepMap[f.key];
+    stepBtn.classList.toggle("active", fineStepMap[f.key]);
+    const fineStep = fineStepMap[f.key] ? 0.001 : (f.step || 0.01);
+    slider.step = fineStep;
+    numInput.step = fineStep;
+  });
+
+  row.appendChild(sliderWrap);
+  row.appendChild(numInput);
+  row.appendChild(stepBtn);
+  wrapper.appendChild(row);
+
+  // Sync: slider -> num input + send
+  slider.addEventListener("input", () => {
+    numInput.value = slider.value;
+    updateSliderTrack(slider, f);
+    sendHandlingDebounced(f.key, slider.value);
+    markChanged(f.key);
+  });
+
+  // Sync: num input -> slider + send
+  numInput.addEventListener("input", () => {
+    const v = parseFloat(numInput.value);
+    if (!isNaN(v)) {
+      slider.value = v;
+      updateSliderTrack(slider, f);
+      sendHandlingDebounced(f.key, numInput.value);
+      markChanged(f.key);
+    }
+  });
+
+  return wrapper;
+}
+
+function buildVectorControl(f) {
+  const wrapper = document.createElement("div");
+
+  const labels = ["X", "Y", "Z"];
+  const keys = ["x", "y", "z"];
+  const vals = f.value || { x: 0, y: 0, z: 0 };
+
+  const grid = document.createElement("div");
+  grid.className = "vector-row";
+
+  const emptyLabel = document.createElement("div");
+  emptyLabel.className = "axis-label";
+  emptyLabel.textContent = "XYZ";
+  grid.appendChild(emptyLabel);
+
+  keys.forEach((ax, i) => {
+    const inp = document.createElement("input");
+    inp.type = "number";
+    inp.className = "vec-input";
+    inp.id = `vec-${ax}-${f.key}`;
+    inp.value = vals[ax] !== undefined ? vals[ax] : 0;
+    inp.step = 0.1;
+    inp.placeholder = labels[i];
+
+    inp.addEventListener("input", () => {
+      const x = document.getElementById(`vec-x-${f.key}`).value;
+      const y = document.getElementById(`vec-y-${f.key}`).value;
+      const z = document.getElementById(`vec-z-${f.key}`).value;
+      sendHandlingDebounced(f.key, `${x},${y},${z}`);
+      markChanged(f.key);
+    });
+
+    grid.appendChild(inp);
+  });
+
+  wrapper.appendChild(grid);
+  return wrapper;
+}
+
+function updateSliderTrack(slider, f) {
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const val = parseFloat(slider.value);
+  if (max === min) return;
+  const pct = ((val - min) / (max - min)) * 100;
+  slider.style.setProperty("--val-pct", pct + "%");
+}
+
+function markChanged(key) {
+  changeMap[key] = true;
+  const card = document.getElementById(`card-${key}`);
+  if (card) card.classList.add("changed");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SEND TO LUA (debounced)
+// ═══════════════════════════════════════════════════════════════════
+function sendHandlingDebounced(key, value) {
+  clearTimeout(debounceTimers[key]);
+  debounceTimers[key] = setTimeout(() => {
+    post("modernUpdateHandling", { key: String(key), value: String(value) });
+  }, DEBOUNCE_MS);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TOOLBAR ACTIONS
+// ═══════════════════════════════════════════════════════════════════
+function modernClose() {
+  post("modernClose");
+}
+
+function modernResetOriginal() {
+  if (!confirm("Reset all values to when you opened the editor?")) return;
+  post("modernResetOriginal");
+}
+
+function modernCopyHandling() {
+  post("modernCopyHandling");
+  showStatus("Handling XML copied to clipboard!");
+}
+
+function togglePresets() {
+  presetsOpen = !presetsOpen;
+  document.getElementById("presets-panel").classList.toggle("open", presetsOpen);
+}
+
+function savePreset() {
+  const name = document.getElementById("preset-name-input").value.trim();
+  if (!name) return;
+  post("modernSavePreset", { name });
+  document.getElementById("preset-name-input").value = "";
+}
+
+function renderPresets(presets) {
+  const list = document.getElementById("presets-list");
+  if (!presets || presets.length === 0) {
+    list.innerHTML = '<span style="color:var(--muted);font-size:11px;">No presets saved.</span>';
+    return;
+  }
+  list.innerHTML = "";
+  presets.forEach(p => {
+    const chip = document.createElement("div");
+    chip.className = "preset-chip";
+    chip.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="del-btn" data-name="${escapeHtml(p.name)}">✕</span>`;
+    chip.querySelector("span:first-child").addEventListener("click", () => {
+      post("modernLoadPreset", { name: p.name });
+      showStatus(`Preset "${p.name}" loaded`);
+    });
+    chip.querySelector(".del-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      post("modernDeletePreset", { name: p.name });
+    });
+    list.appendChild(chip);
+  });
+}
+
+function showStatus(msg) {
+  const el = document.getElementById("status-text");
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = "Live editing active"; }, 3000);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Close on overlay click (outside panel)
+document.getElementById("modern-overlay").addEventListener("click", function(e) {
+  if (e.target === this) modernClose();
+});
+
+// Prevent keystrokes from leaking to game while inputs are focused
+document.addEventListener("keydown", function(e) {
+  if (document.getElementById("modern-overlay").classList.contains("visible")) {
+    if (e.key === "Escape") modernClose();
+  }
+});
+</script>
+
+<!-- Legacy CSS inline (preserving original) -->
+<style>
+body { font-weight: normal; font-family: Arial; font-size: 1.5vmin; font-weight: 800; color: white; text-shadow: 1px 1px 0px rgba(0,0,0,0.8), -1px 1px 0px rgba(0,0,0,0.8), 1px -1px 0px rgba(0,0,0,0.8), -1px -1px 0px rgba(0,0,0,0.8); user-select: none; text-align: left; }
+input { background: rgba(0,0,0,0.4); color: white; border: none; outline: none; user-select: all; }
+button { background: rgba(255,255,255,0.8); padding: 0.5vmin; color: black; border: none; outline: none; font-weight: 700; border-radius: 4px; margin-top: 1vmin; margin-bottom: 1vmin; }
+button:active { background: rgba(128,192,255,0.8); }
+#handling-fields { display: flex; flex-direction: column; flex-wrap: wrap; justify-content: space-between; width: 50vw; max-height: 50vh; }
+#handling-fields div { display: flex; justify-content: space-between; margin-right: 2vmin; }
+.tooltip .tooltip-text { visibility: hidden; width: 50vw; background-color: rgba(0,0,0,0.4); color: white; text-align: left; padding: 1vmin 1vmin; border-radius: 1vmin; position: absolute; z-index: 1; top: 110%; left: 50%; opacity: 0; transform: translate(-50%, 0%); }
+.tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+</style>
+</body>
 </html>
