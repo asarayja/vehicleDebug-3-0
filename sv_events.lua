@@ -122,3 +122,28 @@ RegisterNetEvent("vehdebug:requestCacheStatus", function()
 
 	TriggerClientEvent("vehdebug:cacheStatus", source, table.concat(lines, "\n"))
 end)
+
+--[[
+	vehdebug:requestOriginalHandling
+	─────────────────────────────────
+	Client fires this when Modern UI opens.
+	Server reads the handling.meta file and
+	returns the true original values — not
+	what is currently on the live entity.
+]]
+RegisterNetEvent("vehdebug:requestOriginalHandling", function(modelName)
+	local source = source
+
+	if not Security.Check(source, "vehdebug:requestOriginalHandling") then
+		return
+	end
+
+	local safeModel = modelName and modelName:match("^%s*(.-)%s*$")
+	if not safeModel or safeModel == "" or not safeModel:match("^[%w_]+$") or #safeModel > 64 then
+		TriggerClientEvent("vehdebug:originalHandling", source, nil, "Ugyldig modellnavn.")
+		return
+	end
+
+	local fields, err = SaveEngine.ReadHandling(safeModel)
+	TriggerClientEvent("vehdebug:originalHandling", source, fields, err)
+end)

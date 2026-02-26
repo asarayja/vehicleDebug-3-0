@@ -21,7 +21,9 @@ ModernUI = {
 	vehicle = nil,
 	-- Preset storage: table of { name = string, values = { [key] = value, ... } }
 	presets = {},
-	-- Original values snapshot taken when UI opens, for "Reset to Original"
+	-- Original values from the handling.meta file on the server.
+	-- Populated via vehdebug:originalHandling response, NOT from the live entity.
+	-- Keyed by field name for fast lookup: { fieldName = "value", ... }
 	originalValues = {},
 }
 
@@ -64,33 +66,11 @@ function ModernUI:BuildFieldData(vehicle)
 					description = field.description or "No description available.",
 				}
 			else
-				if Config.Debug then
-					print("[VehicleDebug/Modern] WARNING: Could not read field " .. field.name)
-				end
+				print("[VehicleDebug/Modern] WARNING: Could not read field " .. field.name)
 			end
 		end
 	end
 	return fields
-end
-
--- Capture original values for reset functionality
-function ModernUI:CaptureOriginals(vehicle)
-	self.originalValues = {}
-	for key, field in pairs(Config.Fields) do
-		local fieldType = Config.Types[field.type]
-		if fieldType then
-			local ok, value = pcall(fieldType.getter, vehicle, "CHandlingData", field.name)
-			if ok then
-				if type(value) == "vector3" then
-					self.originalValues[key] = ("%s,%s,%s"):format(value.x, value.y, value.z)
-				elseif field.type == "float" then
-					self.originalValues[key] = tostring(SharedHandling.TruncateNumber(value))
-				else
-					self.originalValues[key] = tostring(value)
-				end
-			end
-		end
-	end
 end
 
 function ModernUI:Open()
@@ -114,9 +94,6 @@ function ModernUI:Open()
 	self.vehicle = vehicle
 	self.isOpen = true
 
-	-- Capture originals for reset
-	self:CaptureOriginals(vehicle)
-
 	-- Get model name for display
 	-- Use GetEntityArchetypeName to get the actual spawn/model name
 	-- (matches <handlingName> in meta files, e.g. "khangarage_wheelchair")
@@ -126,6 +103,12 @@ function ModernUI:Open()
 		local modelHash = GetEntityModel(vehicle)
 		modelName = GetDisplayNameFromVehicleModel(modelHash) or "Unknown"
 	end
+
+	-- Request original values from the server (reads handling.meta directly).
+	-- These arrive via vehdebug:originalHandling and are stored in originalValues.
+	-- We clear first so stale values from a previous vehicle are never used.
+	self.originalValues = {}
+	TriggerServerEvent("vehdebug:requestOriginalHandling", modelName)
 
 	-- Build and send field data + presets
 	self:Invoke("open", {
@@ -152,8 +135,27 @@ end
 function ModernUI:ResetToOriginals()
 	if not DoesEntityExist(self.vehicle or 0) then return end
 
-	for key, value in pairs(self.originalValues) do
-		SharedHandling.SetFieldValue(self.vehicle, key, value)
+	if not next(self.originalValues) then
+		TriggerEvent('chat:addMessage', {
+			color     = { 255, 180, 50 },
+			multiline = false,
+			args      = { "Vehicle Handling", "Originalverdier ikke lastet ennå — prøv igjen om et øyeblikk." },
+		})
+		return
+	end
+
+	-- originalValues is keyed by field name (from the server XML read).
+	-- Map back through Config.Fields to get the numeric key SetFieldValue expects.
+	local nameToKey = {}
+	for key, field in pairs(Config.Fields) do
+		nameToKey[field.name] = key
+	end
+
+	for fieldName, value in pairs(self.originalValues) do
+		local key = nameToKey[fieldName]
+		if key then
+			SharedHandling.SetFieldValue(self.vehicle, key, value)
+		end
 	end
 
 	-- Refresh the UI values
@@ -196,7 +198,7 @@ function ModernUI:SavePreset(name)
 	end
 
 	self:Invoke("presetsUpdated", { presets = self.presets })
-	if Config.Debug then print("[VehicleDebug/Modern] Preset saved: " .. name) end
+	print("[VehicleDebug/Modern] Preset saved: " .. name)
 end
 
 function ModernUI:LoadPreset(name)
@@ -211,7 +213,7 @@ function ModernUI:LoadPreset(name)
 			self:Invoke("refreshValues", {
 				fields = self:BuildFieldData(self.vehicle),
 			})
-			if Config.Debug then print("[VehicleDebug/Modern] Preset loaded: " .. name) end
+			print("[VehicleDebug/Modern] Preset loaded: " .. name)
 			return
 		end
 	end

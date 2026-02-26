@@ -74,11 +74,9 @@ local function collectHandlingData(vehicle)
 					value = serialised,
 				}
 			else
-				if Config.Debug then
-					print(("[VehDebug/SaveBridge] Could not read field '%s': %s"):format(
-						field.name, tostring(value)
-					))
-				end
+				print(("[VehDebug/SaveBridge] Could not read field '%s': %s"):format(
+					field.name, tostring(value)
+				))
 			end
 		end
 	end
@@ -112,11 +110,9 @@ function SaveBridge.Save(vehicle, uiSource)
 	-- Record which UI is waiting so the result handler can notify it
 	SaveBridge._pendingSource = uiSource
 
-	if Config.Debug then
-		print(("[VehDebug/SaveBridge] Sending save for '%s' (%d fields) from %s UI"):format(
-			modelName, #handlingData, uiSource
-		))
-	end
+	print(("[VehDebug/SaveBridge] Sending save for '%s' (%d fields) from %s UI"):format(
+		modelName, #handlingData, uiSource
+	))
 
 	TriggerServerEvent("vehdebug:saveHandling", modelName, handlingData)
 end
@@ -137,10 +133,8 @@ function SaveBridge._deliverResult(uiSource, success, message)
 	})
 
 	-- Also print to F8 for debugging
-	if Config.Debug then
-		local prefix = success and "[OK]" or "[FAIL]"
-		print(("[VehDebug/SaveBridge] %s %s"):format(prefix, message))
-	end
+	local prefix = success and "[OK]" or "[FAIL]"
+	print(("[VehDebug/SaveBridge] %s %s"):format(prefix, message))
 end
 
 --[[ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -183,8 +177,32 @@ end)
      EVENT: Cache status debug response
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]]
 RegisterNetEvent("vehdebug:cacheStatus", function(text)
-	-- Always print: this event is only fired when explicitly requested via /vehdebug_cachestatus
 	print("[VehDebug/CacheStatus]\n" .. text)
+end)
+
+--[[ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     EVENT: Original handling from server
+     Fired in response to vehdebug:requestOriginalHandling.
+     fields: array of { name, value } from the XML file,
+     or nil if the model was not found.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]]
+RegisterNetEvent("vehdebug:originalHandling", function(fields, err)
+	if not fields then
+		if Config.Debug then
+			print("[VehDebug/SaveBridge] Could not load original handling: " .. tostring(err))
+		end
+		return
+	end
+
+	-- Store in ModernUI.originalValues keyed by field name
+	ModernUI.originalValues = {}
+	for _, entry in ipairs(fields) do
+		ModernUI.originalValues[entry.name] = entry.value
+	end
+
+	if Config.Debug then
+		print(("[VehDebug/SaveBridge] Original handling loaded: %d fields."):format(#fields))
+	end
 end)
 
 --[[ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

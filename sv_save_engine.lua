@@ -74,9 +74,9 @@ local function scanResource(resourceName)
 								relativePath = subPath,
 								absolutePath = absolutePath,
 							}
-							if SvConfig.Debug then print(("[VehDebug/SaveEngine] Cached: %s → %s/%s"):format(
+							print(("[VehDebug/SaveEngine] Cached: %s → %s/%s"):format(
 								modelName, resourceName, subPath
-							)) end
+							))
 						end
 					end
 				end
@@ -93,7 +93,7 @@ end
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]]
 function SaveEngine.BuildCache()
 	local total = GetNumResources()
-	if SvConfig.Debug then print(("[VehDebug/SaveEngine] Starting cache build. %d resources to scan."):format(total)) end
+	print(("[VehDebug/SaveEngine] Starting cache build. %d resources to scan."):format(total))
 
 	local scanned = 0
 	Citizen.CreateThread(function()
@@ -114,7 +114,7 @@ function SaveEngine.BuildCache()
 		SaveEngine.cacheBuilt = true
 		local count = 0
 		for _ in pairs(SaveEngine.cache) do count = count + 1 end
-		if SvConfig.Debug then print(("[VehDebug/SaveEngine] Cache build complete. %d models indexed."):format(count)) end
+		print(("[VehDebug/SaveEngine] Cache build complete. %d models indexed."):format(count))
 	end)
 end
 
@@ -136,14 +136,14 @@ function SaveEngine.FindHandlingFile(modelName)
 	end
 
 	-- Slow path: live scan (handles resources added after startup)
-	if SvConfig.Debug then print(("[VehDebug/SaveEngine] Cache miss for '%s' — live scan starting."):format(key)) end
+	print(("[VehDebug/SaveEngine] Cache miss for '%s' — live scan starting."):format(key))
 	local total = GetNumResources()
 	for i = 0, total - 1 do
 		local resName = GetResourceByFindIndex(i)
 		if resName and resName ~= "" and GetResourceState(resName) == "started" then
 			pcall(scanResource, resName)
 			if SaveEngine.cache[key] then
-				if SvConfig.Debug then print(("[VehDebug/SaveEngine] Found '%s' in '%s' via live scan."):format(key, resName)) end
+				print(("[VehDebug/SaveEngine] Found '%s' in '%s' via live scan."):format(key, resName))
 				return SaveEngine.cache[key]
 			end
 		end
@@ -163,7 +163,7 @@ local function writeBackup(entry, originalContent)
 	local bakPath = entry.relativePath .. ".bak"
 	local ok = SaveResourceFile(entry.resourceName, bakPath, originalContent, -1)
 	if ok then
-		if SvConfig.Debug then print(("[VehDebug/SaveEngine] Backup written: %s/%s"):format(entry.resourceName, bakPath)) end
+		print(("[VehDebug/SaveEngine] Backup written: %s/%s"):format(entry.resourceName, bakPath))
 	else
 		print(("[VehDebug/SaveEngine] WARNING: Backup FAILED for %s/%s"):format(entry.resourceName, bakPath))
 	end
@@ -331,9 +331,9 @@ function SaveEngine.SaveHandling(modelName, handlingTable)
 		return false, msg
 	end
 
-	if SvConfig.Debug then print(("[VehDebug/SaveEngine] Saving '%s' → %s/%s"):format(
+	print(("[VehDebug/SaveEngine] Saving '%s' → %s/%s"):format(
 		modelName, entry.resourceName, entry.relativePath
-	)) end
+	))
 
 	-- 2. Read current file content
 	local content = LoadResourceFile(entry.resourceName, entry.relativePath)
@@ -387,7 +387,7 @@ function SaveEngine.InvalidateResource(resourceName)
 		end
 	end
 	if removed > 0 then
-		if SvConfig.Debug then print(("[VehDebug/SaveEngine] Invalidated %d cache entries for resource '%s'"):format(removed, resourceName)) end
+		print(("[VehDebug/SaveEngine] Invalidated %d cache entries for resource '%s'"):format(removed, resourceName))
 	end
 	-- Re-scan immediately
 	pcall(scanResource, resourceName)
@@ -412,3 +412,65 @@ AddEventHandler("onResourceStart", function(resName)
 		SaveEngine.BuildCache()
 	end
 end)
+
+--[[ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     PUBLIC: ReadHandling
+     Reads the handling.meta for modelName
+     and returns a flat table of
+     { name, type, value } entries
+     parsed directly from the XML file.
+     This is the true "original" state —
+     unaffected by any live in-game edits.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]]
+function SaveEngine.ReadHandling(modelName)
+	local entry = SaveEngine.FindHandlingFile(modelName)
+	if not entry then
+		return nil, ("No handling file found for '%s'."):format(modelName)
+	end
+
+	local content = LoadResourceFile(entry.resourceName, entry.relativePath)
+	if not content or content == "" then
+		return nil, ("Could not read file '%s/%s'."):format(entry.resourceName, entry.relativePath)
+	end
+
+	local targetLower = modelName:lower()
+
+	-- Locate the correct <Item type="CHandlingData"> block
+	local searchPos = 1
+	while true do
+		local blockStart, blockEnd_tag = content:find('<Item%s+type%s*=%s*"CHandlingData"%s*>', searchPos)
+		if not blockStart then break end
+
+		local closingStart, closingEnd = content:find('</Item>', blockEnd_tag + 1, true)
+		if not closingStart then break end
+
+		local block = content:sub(blockStart, closingEnd)
+
+		local blockName = block:match('<handlingName>%s*([%w_]+)%s*</handlingName>')
+		if blockName and blockName:lower() == targetLower then
+			-- Parse all fields from the block
+			local fields = {}
+
+			-- float / integer: <fieldName value="X" />
+			for fname, fval in block:gmatch('<([%w_]+)%s+value%s*=%s*"([^"]*)"') do
+				if fname ~= "handlingName" then
+					-- Determine type: integer fields start with 'n' or 'i' by GTA convention,
+					-- but we rely on Config field list via a lookup on the client side.
+					-- Send raw string value; client knows the type from Config.Fields.
+					fields[#fields + 1] = { name = fname, value = fval }
+				end
+			end
+
+			-- vector: <fieldName x="X" y="Y" z="Z" />
+			for fname, fx, fy, fz in block:gmatch('<([%w_]+)%s+x%s*=%s*"([^"]*)"[^/]*y%s*=%s*"([^"]*)"[^/]*z%s*=%s*"([^"]*)"') do
+				fields[#fields + 1] = { name = fname, value = fx .. "," .. fy .. "," .. fz }
+			end
+
+			return fields, nil
+		end
+
+		searchPos = closingEnd + 1
+	end
+
+	return nil, ("Model '%s' not found in handling file."):format(modelName)
+end
