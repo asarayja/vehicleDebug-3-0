@@ -1,4 +1,4 @@
-# vehicleDebug v2.1.0
+# vehicleDebug v3.0.0
 
 A dual-UI FiveM vehicle handling editor with **permanent file save**.  
 Edit handling values live with the classic compact editor or a professional tuning dashboard — both can write changes directly back to `handling.meta` on the server.
