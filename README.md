@@ -1,118 +1,168 @@
-# vehicleDebug v3.0.0
+vehicleDebug v3.0
 
-A dual-UI FiveM vehicle handling editor with **permanent file save**.  
-Edit handling values live with the classic compact editor or a professional tuning dashboard — both can write changes directly back to `handling.meta` on the server.
+A dual-UI FiveM vehicle handling editor with permanent server-side file save and unified architecture.
 
----
+Edit vehicle handling live using either the classic compact editor or a modern professional tuning dashboard — both write changes directly to the correct handling.meta on the server.
 
-## What's in v2.1
+🚀 What's New in v3.0
 
-- **Permanent save** — both UIs can write changes directly to the vehicle's `handling.meta` file on the server
-- **Auto-discovery** — the server scans all resources at startup to map every model to its handling file
-- **Backup before save** — a `.bak` file is written automatically before any changes are made
-- **Precision XML rewriting** — only the correct `<Item type="CHandlingData">` block is touched; all other vehicles and formatting are preserved
-- **ACE permission security** — save is gated behind `vehicleDebug.save` permission (configurable)
-- **Single save engine** — both Legacy and Modern UI use the same code path; zero duplication
+Unified save engine — Legacy and Modern UI now use the same permanent save pipeline
 
----
+License-based security — Access controlled via Config.AllowedLicenses (no ACE required)
 
-## Installation
+Automatic handling file discovery — Server scans and maps all models at startup
 
-1. Drop the `vehicleDebug` folder into `resources/`.
-2. Add `ensure vehicleDebug` to `server.cfg`.
-3. Grant save permission:
+Safe XML rewriting — Only the correct <Item type="CHandlingData"> block is modified
 
-```
-add_ace group.admin vehicleDebug.save allow
-add_ace identifier.license:abc123 vehicleDebug.save allow
-```
+Automatic backup — .bak file written before every overwrite
 
-Or open `sv_events.lua` and set `REQUIRE_ACE_PERMISSION = false` for open access.
+Stable build compatible — No beta natives required
 
----
+Modular architecture — Clear separation between UI, handling logic, save engine, and security
 
-## Commands
+✨ Features
 
-| Command | Description |
-|---|---|
-| **Right Alt** | Open/close Legacy UI (in vehicle) |
-| `/vehdebug` | Toggle Legacy UI on/off |
-| `/vehiclehandling` | Open/close Modern UI (in vehicle) |
-| `/vehdebug_cachestatus` | (ACE only) Print handling file cache to F8 |
+Live handling editing (real-time apply)
 
----
+Dual UI system:
 
-## Save Flow
+🧓 Classic Legacy UI
 
-When 💾 Save to File is clicked in either UI:
+🆕 Modern tuning dashboard with sliders + numeric sync
 
-1. All live handling values are read from the vehicle
-2. Sent to server via `vehdebug:saveHandling`
-3. Server locates the correct `handling.meta` for that model
-4. Backup written: `handling.meta.bak`
-5. Only the matching `<Item type="CHandlingData">` block is updated
-6. File written back to disk
-7. Success/failure shown in UI
+Permanent save to correct handling file
 
----
+Supports GTA vehicles (override capable)
 
-## Supported File Structures
+Supports custom vehicles
 
-```
+Multiple vehicles per file supported
+
+Cache system for performance
+
+🔐 Security (v3.0)
+
+Access is now controlled exclusively via license whitelist.
+
+In cl_config.lua:
+
+Config.AllowedLicenses = {
+  "license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
+
+Only these players can:
+
+Open Legacy UI
+
+Open Modern UI
+
+Save handling to file
+
+Trigger reload events
+
+All save events are validated server-side.
+
+No ACE permissions required.
+
+📦 Installation
+
+Place vehicleDebug inside resources/
+
+Add to server.cfg:
+
+ensure vehicleDebug
+
+Add your license identifiers to Config.AllowedLicenses
+
+Restart server.
+
+⌨ Commands
+Command	Description
+Right Alt	Toggle Legacy UI (in vehicle)
+/vehdebug	Toggle Legacy UI
+/vehiclehandling	Open Modern UI
+/vehdebug_cachestatus	Print handling cache status (whitelisted only)
+💾 Save Flow (Both UIs)
+
+When 💾 Save is pressed:
+
+All live handling values are read from the vehicle
+
+Sent to server via vehdebug:saveHandling
+
+License validated
+
+Correct handling.meta located via cache
+
+Backup created (handling.meta.bak)
+
+Only matching <Item type="CHandlingData"> updated
+
+File written to disk
+
+UI receives success/fail response
+
+📁 Supported File Structures
+
+vehicleDebug supports automatic detection of:
+
 resource/handling.meta
 resource/data/handling.meta
 resource/data/handling/handling.meta
 resource/stream/data/handling.meta
-```
 
 Multiple vehicles per file are fully supported.
 
----
-
-## Architecture
-
-```
+🏗 Architecture (v3.0)
 vehicleDebug/
-├── fxmanifest.lua         — Resource manifest
-├── cl_config.lua          — Shared config: fields, types, slider ranges
-├── shared_handling.lua    — Client utility: get/set/export
-├── cl_save_bridge.lua     — Client save layer: collects values, fires event, shows result
-├── cl_debugger.lua        — Legacy UI controller
-├── cl_modern.lua          — Modern UI controller
-├── sv_save_engine.lua     — Server: cache, file discovery, XML rewrite, backup
-├── sv_events.lua          — Server: auth, validation, dispatch
-└── html/index.html        — Single NUI page (both UIs)
-```
+├── fxmanifest.lua
+├── cl_config.lua
+├── shared_handling.lua
+├── cl_save_bridge.lua
+├── cl_debugger.lua        (Legacy UI controller)
+├── cl_modern.lua          (Modern UI controller)
+├── sv_save_engine.lua     (File discovery, cache, XML rewrite, backup)
+├── sv_events.lua          (Security + validation + dispatch)
+└── html/index.html        (Dual UI system)
+Data Flow
+[UI click]
+   ↓
+[cl_save_bridge]
+   ↓
+vehdebug:saveHandling
+   ↓
+[sv_events → license validation]
+   ↓
+[sv_save_engine → locate → backup → rewrite → save]
+   ↓
+vehdebug:saveResult
+   ↓
+[UI toast notification]
+🛡 Input Validation
 
-### Data flow
+All inputs are sanitised server-side before file write:
 
-```
-[UI click] → [cl_save_bridge] → vehdebug:saveHandling → [sv_events auth]
-  → [sv_save_engine: find file → backup → rewrite XML → write]
-  → vehdebug:saveResult → [UI toast]
-```
+Model name: alphanumeric + underscore (max 64 chars)
 
----
+Field names: whitelist-validated
 
-## Security
+Field types: float, integer, vector
 
-All inputs are sanitised server-side before any file I/O:
-- Model name: alphanumeric + underscore, max 64 chars
-- Field names: alphanumeric + underscore only
-- Field types: whitelist (`float`, `integer`, `vector`)
-- Values: parsed through tonumber / vector parser before write
+Values parsed via tonumber() / safe vector parsing
 
-Settings in `sv_events.lua`:
+🎯 Compatibility
 
-| Setting | Default | Effect |
-|---|---|---|
-| `REQUIRE_ACE_PERMISSION` | `true` | Require `vehicleDebug.save` ACE |
-| `USE_LICENSE_WHITELIST` | `false` | Use license list instead |
-| `ALLOWED_LICENSES` | `{}` | Licenses to whitelist |
+Works on standard FiveM stable build
 
----
+No experimental natives
 
-## Credits
+Compatible with large servers
 
-- Original resource by **Kerminal**
-- Handling field descriptions: V4D3R on 5Mods — https://forums.gta5-mods.com/topic/3842/tutorial-handling-meta
+Handles multiple resources and mixed file layouts
+
+👑 Credits
+
+Original resource by Kerminal
+
+Handling field documentation by V4D3R
+https://forums.gta5-mods.com/topic/3842/tutorial-handling-meta
