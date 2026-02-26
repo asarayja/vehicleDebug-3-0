@@ -1,300 +1,220 @@
-Config = {
-	Precision = 100.0,
-	Keybind = "rmenu", -- lmenu = Left Alt, rmenu = Right Alt | Full list: https://docs.fivem.net/docs/game-references/input-mapper-parameter-ids/keyboard/
-	EnabledByDefault = true, -- Set to false if you want the debugger disabled by default (use /vehdebug to enable)
-	Fields = {
-		{ name = "fMass", type = "float", description = [[
-			The weight of the vehicle. Values should be given in Kilograms.
-			<ul>
-				<li>Used when the vehicle collides with another vehicle or a non-static object.</li>
-			</ul>
-		]] },
-		{ name = "fInitialDragCoeff", type = "float", description = [[
-			Sets the drag coefficient of the vehicle. Increase to simulate aerodynamic drag.
-			<ul>
-				<li>Value: 10-120</li>
-			</ul>
-		]] },
-		{ name = "fDownforceModifier", type = "float" },
-		{ name = "fPercentSubmerged", type = "float", description = [[
-			The percentage of the vehicle's "floating height" after it falls into the water, before sinking.
-			<ul>
-				<li>Default - 85% for vanilla, land vehicles. The value will stop sinking the vehicle to float for a moment before sinking. Boats excluded.</li>
-				<li>Value: Any percentage. Should be given in decimal. Example: 0.70 (70%)</li>
-				<li>An invalid number will cause the vehicle to sink without the driver drowning.</li>
-			</ul>
-		]] },
-		{ name = "vecCentreOfMassOffset", type = "vector", description = [[
-			Shifts the center of gravity in meters from side to side.<br>
-			Values (0 means that the center of gravity will be in the center of the vehicle):
-			<ul>
-				<li>X: -10.0 to 10.0. Positive values move the center of gravity right.</li>
-				<li>Y: -10.0 to 10.0. Positive values move the center of gravity forwards.</li>
-				<li>Z: -10.0 to 10.0. Positive values move the center of gravity upwards.</li>
-			</ul>
-		]] },
-		{ name = "vecInertiaMultiplier", type = "vector", description = [[
-			Handles the vehicle's inertia.<br>
-			Values (Default values tend to be 1.0):
-			<ul>
-				<li>X: -10.0 to 10.0. Positive values increase Pitch (Forward & Back).</li>
-				<li>Y: -10.0 to 10.0. Positive values increase Roll (Side to Side).</li>
-				<li>Z: -10.0 to 10.0. Positive values increase Yaw (Rotation).</li>
-			</ul>
-		]] },
-		{ name = "fDriveBiasFront", type = "float", description = [[
-			This is used to determine whether a vehicle is front, rear, or four wheel drive.<br>Values:
-			<ul>
-				<li>0.0 means that the vehicle is rear wheel drive.</li>
-				<li>1.0 means that the vehicle is front wheel drive.</li>
-				<li>Any value between 0.01 and 0.99 is four wheel drive.</li>
-				<li>0.5 give both front and rear axles equal force, being the perfect 4WD.</li>
-			</ul>
-		]] },
-		{ name = "nInitialDriveGears", type = "integer", description = [[
-			This line determines how many forward speeds/gears a vehicle's transmission contains.<br>
-			Values: 1 or more.
-		]] },
-		{ name = "fInitialDriveForce", type = "float", description = [[
-			This modifies the game's calculation of drive force (from the output of the transmission).<br>
-			Values (0.01 - 2.0 and above):
-			<ul>
-				<li>1.0 uses drive force calculation unmodified.</li>
-				<li>Values less than 1.0 will in effect give the vehicle less drive force.</li>
-				<li>Values greater than 1.0 will produce more drive force.</li>
-			</ul>
-		]] },
-		{ name = "fDriveInertia", type = "float", description = [[
-			Describes how fast an engine will rev.
-			Values (0.01 - 2.0):
-			<ul>
-				<li>Default value is 1.0, (or no modification of drive intertia).</li>
-				<li>Bigger values = quicker Redline (maximum engine speed)</li>
-			</ul>
-		]] },
-		{ name = "fClutchChangeRateScaleUpShift", type = "float", description = [[
-			Clutch speed multiplier on up shifts.
-			<ul>
-				<li>Bigger numbers = faster shifts.</li>
-			</ul>
-		]] },
-		{ name = "fClutchChangeRateScaleDownShift", type = "float", description = [[
-			Clutch speed multiplier on down shifts.
-			<ul>
-				<li>Bigger numbers = faster shifts.</li>
-			</ul>
-		]] },
-		{ name = "fInitialDriveMaxFlatVel", type = "float", description = [[
-			This determines the vehicle speed at redline in the top gear (not the show). Setting this value DOES NOT guarantee the vehicle will reach the given speed.<br>
-			Values (0.00 and above):
-			<ul>
-				<li>Multiply the number in the file by 0-82 to get the speed in mph.</li>
-				<li>Multiply by 1.32 to get the speed in kph.</li>
-			</ul>
-		]] },
-		{ name = "fBrakeForce", type = "float", description = [[
-			Multiplies the game's calculation of deceleration.<br>
-			Values (0.01 - 2.0 and above):
-			<ul>
-				<li>Bigger numbers = harder braking.</li>
-				<li>1.0 uses brake force calculation unmodified.</li>
-			</ul>
-		]] },
-		{ name = "fBrakeBiasFront", type = "float", description = [[
-			This line controls the distribution of braking force between the front and rear axles.<br>
-			Values:
-			<ul>
-				<li>0.0 means the rear axle only receives brake force.</li>
-				<li>1.0 means the front axle only receives brake force.</li>
-				<li>0.5 gives both axles equal brake force.</li>
-				<li>Values between 0.01 and 0.49 means the rear axle will receive more brake force.</li>
-				<li>Values between 0.51 and 0.99 means the front axles will receive more brake force than the rear.</li>
-			</ul>
-		]] },
-		{ name = "fHandBrakeForce", type = "float", description = [[
-			Braking power of the handbrake.<br>
-			Values (0.0 and above):
-			<ul>
-				<li>Bigger numbers = harder braking.</li>
-			</ul>
-		]] },
-		{ name = "fSteeringLock", type = "float", description = [[
-			This multiplies the game's calculation of the angle of the steer wheel will turn while at full turn. Steering lock is directly related to over/under-steer.<br>
-			Values (0.0 and above):
-			<ul>
-				<li>Values between 0.1 - 0.2 will simulate a long wheelbase.</li>
-				<li>Values around 0.75 and above will turn extremely fast. Higher values will cause the vehicle to spin out easily.</li>
-			</ul>
-		]] },
-		{ name = "fTractionCurveMax", type = "float", description = [[
-			Cornering grip of the vehicle as a multiplier of the tire surface friction.<br>
-			ie: Higher value gives better grip while off pedal
-		]] },
-		{ name = "fTractionCurveMin", type = "float", description = [[
-			Accelerating/braking grip of the vehicle as a multiplier of the tire surface friction.<br>
-			ie: Higher value gives better grip while on pedal
-		]] },
-		{ name = "fTractionCurveLateral", type = "float", description = [[
-			Shape of lateral traction curve (peak traction position in degrees sideways = fTractionCurveLateral / 2).<br>
-			Lower values make the vehicle's grip more responsive but less forgiving to loss of traction.<br>
-			Higher values make the vehicle's grip less responsive but more forgiving to loss of traction. Also known as "slip angle".
-		]] },
-		{ name = "fTractionSpringDeltaMax", type = "float", description = [[
-			This value determines at what distance above the ground the car will lose traction.
-		]] },
-		{ name = "fLowSpeedTractionLossMult", type = "float", description = [[
-			How much traction is reduced at low speed.
-			<ul>
-				<li>0.0 means normal traction. It affects mainly car burnout when pressing gas (W/UP).</li>
-				<li>Decreasing value will cause less burnout, less sliding at start.</li>
-				<li>Higher value will cause more burnout.</li>
-			</ul>
-		]] },
-		{ name = "fCamberStiffnesss", type = "float", description = [[
-			This value modify the grip of the car when you're drifting.
-			<ul>
-				<li>More than 0 make the car sliding on the same angle you're drifting.</li>
-				<li>Less than 0 make your car oversteer.</li>
-				<li>Not recommended to modify it for grip.</li>
-			</ul>
-		]] },
-		{ name = "fTractionBiasFront", type = "float", description = [[
-			Determines the distribution of traction from front to rear.<br>
-			Values (0.01 - 0.99):
-			<ul>
-				<li>0.01 = only rear axle has traction.</li>
-				<li>0.99 = only front axle has traction.</li>
-				<li>0.5 = both axles have equal traction.</li>
-				<li>Entering a value of 0.0 or 1.0 causes the vehicle to have no traction.</li>
-			</ul>
-		]] },
-		{ name = "fTractionLossMult", type = "float", description = [[
-			Affects how much grip is changed when driving on asphalt and mud.
-			<ul>
-				<li>Higher values make the car less responsive and prone to sliding.</li>
-			</ul>
-		]] },
-		{ name = "fSuspensionForce", type = "float", description = [[
-			Affects how strong suspension is.<br>
-			<ul>
-				<li>1 / (Force * Wheels) = Lower limit for zero force at full extension.</li>
-			</ul>
-		]] },
-		{ name = "fSuspensionCompDamp", type = "float", description = [[
-			Damping during strut compression.
-			<ul>
-				<li>Bigger values = stiffer.</li>
-			</ul>
-		]] },
-		{ name = "fSuspensionReboundDamp", type = "float", description = [[
-			Damping during strut rebound.
-		]] },
-		{ name = "fSuspensionUpperLimit", type = "float", description = [[
-			Visual limit of how far can wheels move up / down from original position.
-		]] },
-		{ name = "fSuspensionLowerLimit", type = "float", description = [[
-			Visual limit of how far can wheels move up / down from original position.
-		]] },
-		{ name = "fSuspensionRaise", type = "float", description = [[
-			The amount that the suspension raises the body off the wheels.
-		]] },
-		{ name = "fSuspensionBiasFront", type = "float", description = [[
-			This value determines which suspension is stronger, front or rear.
-			<ul>
-				<li>If value is above 0.50 then front is stiffer, when below, rear is stiffer.</li>
-			</ul>
-		]] },
-		{ name = "fAntiRollBarForce", type = "float", description = [[
-			Larger Numbers = less body roll.
-		]] },
-		{ name = "fAntiRollBarBiasFront", type = "float", description = [[
-			The bias between front and rear for the anti-roll bar.
-			<ul>
-				<li>0 = front</li>
-				<li>1 = rear</li>
-			</ul>
-		]] },
-		{ name = "fRollCentreHeightFront", type = "float", description = [[
-			Values (Recommended -0.15 to 0.15):
-			<ul>
-				<li>Larger Numbers = less rollovers.</li>
-			</ul>
-		]] },
-		{ name = "fRollCentreHeightRear", type = "float", description = [[
-			This value modify the weight transmitted during an acceleration between the front and rear.<br>
-			High positive value can make your car able to do wheelies.<br>
-			Values (Recommended -0.15 to 0.15):
-			<ul>
-				<li>Larger Numbers = less acceleration/deceleration sway.</li>
-			</ul>
-		]] },
-		{ name = "fCollisionDamageMult", type = "float", description = [[
-			Multiplies the game's calculation of damage to the vehicle by collision.
-		]] },
-		{ name = "fWeaponDamageMult", type = "float", description = [[
-			Multiplies the game's calculation of damage to the vehicle by weapons.
-		]] },
-		{ name = "fDeformationDamageMult", type = "float", description = [[
-			Multiplies the game's calculation of deformation damage.
-		]] },
-		{ name = "fEngineDamageMult", type = "float", description = [[
-			Multiplies the game's calculation of damage to the engine, causing explosion or engine failure.
-		]] },
-		{ name = "fPetrolTankVolume", type = "float", description = [[
-			Amount of petrol that will leak after damaging a vehicle's tank.
-		]] },
-		{ name = "fOilVolume", type = "float", description = [[
-			Amount of oil.
-		]] },
-		{ name = "fSeatOffsetDistX", type = "float", description = [[
-			Value: Driver > passenger
-		]] },
-		{ name = "fSeatOffsetDistY", type = "float", description = [[
-			Value: Trunk > hood
-		]] },
-		{ name = "fSeatOffsetDistZ", type = "float", description = [[
-			Value: Undercarriage > roof
-		]] },
-		{ name = "nMonetaryValue", type = "integer" },
+--[[
+	cl_config.lua
+	━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+	Shared configuration for vehicleDebug.
+
+	ACCESS CONTROL
+	──────────────
+	Config.AllowedLicenses is the SINGLE source of truth for access.
+	Add license identifiers here to grant access to a player.
+
+	Format : "license:<40-character hex string>"
+	Example: "license:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+
+	To find a player's license:
+	  • Server console → type "status" and read the identifiers column
+	  • Or use: print(GetPlayerIdentifierByType(source, "license"))
+
+	Client uses this list for UX gating (deny before UI opens).
+	Server uses the SAME list as the hard security gate.
+	No ACE. No steam. No discord. License only.
+	━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+]]
+
+Config = {}
+
+-- ── ACCESS CONTROL ────────────────────────────────────────────────
+Config.AllowedLicenses = {
+	-- "license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+	-- "license:yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+}
+
+-- Message shown client-side to players not on the allowlist.
+Config.AccessDeniedMessage = "Du har ikke tilgang til Vehicle Debugger."
+
+-- ── UI / GENERAL SETTINGS ─────────────────────────────────────────
+-- Keybind for Legacy UI open/close.
+-- Full reference: https://docs.fivem.net/docs/game-references/input-mapper-parameter-ids/keyboard/
+Config.Keybind = "rmenu"        -- rmenu = Right Alt | lmenu = Left Alt
+
+-- Whether the legacy UI starts in the enabled state.
+Config.EnabledByDefault = true
+
+-- Decimal rounding precision used when displaying float values.
+Config.Precision = 100.0
+
+-- ── HANDLING FIELDS ───────────────────────────────────────────────
+-- min/max/step are consumed only by the Modern UI slider renderer.
+-- Legacy UI ignores them and renders plain <input> fields.
+Config.Fields = {
+	{ name = "fMass", type = "float", min = 100.0, max = 10000.0, step = 10.0, category = "Mass & Damage", description = [[
+		The weight of the vehicle in kilograms.
+		<ul><li>Used in collision calculations against other vehicles and non-static objects.</li></ul>
+	]] },
+	{ name = "fInitialDragCoeff", type = "float", min = 0.0, max = 150.0, step = 0.5, category = "Engine & Acceleration", description = [[
+		Aerodynamic drag coefficient. Value: 10–120.
+	]] },
+	{ name = "fDownforceModifier", type = "float", min = 0.0, max = 100.0, step = 0.5, category = "Engine & Acceleration" },
+	{ name = "fPercentSubmerged", type = "float", min = 0.0, max = 1.0, step = 0.01, category = "Mass & Damage", description = [[
+		Float height percentage before sinking. Default ~0.85 for land vehicles.
+	]] },
+	{ name = "vecCentreOfMassOffset", type = "vector", category = "Mass & Damage", description = [[
+		Centre of gravity offset in metres. X = left/right, Y = front/rear, Z = up/down.
+	]] },
+	{ name = "vecInertiaMultiplier", type = "vector", category = "Mass & Damage", description = [[
+		Inertia multiplier. X = Pitch, Y = Roll, Z = Yaw. Default ~1.0.
+	]] },
+	{ name = "fDriveBiasFront", type = "float", min = 0.0, max = 1.0, step = 0.01, category = "Engine & Acceleration", description = [[
+		Drive layout: 0.0 = RWD, 1.0 = FWD, 0.01–0.99 = AWD, 0.5 = equal AWD.
+	]] },
+	{ name = "nInitialDriveGears", type = "integer", min = 1, max = 10, step = 1, category = "Engine & Acceleration", description = [[
+		Number of forward gears.
+	]] },
+	{ name = "fInitialDriveForce", type = "float", min = 0.01, max = 4.0, step = 0.01, category = "Engine & Acceleration", description = [[
+		Drive force multiplier. 1.0 = unmodified. &gt;1.0 = more power.
+	]] },
+	{ name = "fDriveInertia", type = "float", min = 0.01, max = 4.0, step = 0.01, category = "Engine & Acceleration", description = [[
+		Engine rev speed. Bigger = quicker redline.
+	]] },
+	{ name = "fClutchChangeRateScaleUpShift", type = "float", min = 0.1, max = 10.0, step = 0.1, category = "Engine & Acceleration", description = [[
+		Clutch speed on up-shifts. Bigger = faster.
+	]] },
+	{ name = "fClutchChangeRateScaleDownShift", type = "float", min = 0.1, max = 10.0, step = 0.1, category = "Engine & Acceleration", description = [[
+		Clutch speed on down-shifts. Bigger = faster.
+	]] },
+	{ name = "fInitialDriveMaxFlatVel", type = "float", min = 0.0, max = 500.0, step = 1.0, category = "Engine & Acceleration", description = [[
+		Speed at redline in top gear. Multiply by 0.82 for mph, 1.32 for kph.
+	]] },
+	{ name = "fBrakeForce", type = "float", min = 0.01, max = 4.0, step = 0.01, category = "Braking", description = [[
+		Brake deceleration multiplier. Bigger = harder braking.
+	]] },
+	{ name = "fBrakeBiasFront", type = "float", min = 0.0, max = 1.0, step = 0.01, category = "Braking", description = [[
+		Brake bias: 0.0 = rear, 1.0 = front, 0.5 = equal.
+	]] },
+	{ name = "fHandBrakeForce", type = "float", min = 0.0, max = 5.0, step = 0.05, category = "Braking", description = [[
+		Handbrake force. Bigger = harder.
+	]] },
+	{ name = "fSteeringLock", type = "float", min = 0.1, max = 2.0, step = 0.01, category = "Traction & Grip", description = [[
+		Steering angle multiplier. High values cause easy spin-outs.
+	]] },
+	{ name = "fTractionCurveMax", type = "float", min = 0.0, max = 5.0, step = 0.01, category = "Traction & Grip", description = [[
+		Cornering grip (off-pedal).
+	]] },
+	{ name = "fTractionCurveMin", type = "float", min = 0.0, max = 5.0, step = 0.01, category = "Traction & Grip", description = [[
+		Accelerating/braking grip (on-pedal).
+	]] },
+	{ name = "fTractionCurveLateral", type = "float", min = 0.0, max = 45.0, step = 0.1, category = "Traction & Grip", description = [[
+		Slip angle / lateral traction curve shape.
+	]] },
+	{ name = "fTractionSpringDeltaMax", type = "float", min = 0.0, max = 1.0, step = 0.01, category = "Traction & Grip", description = [[
+		Distance above ground at which traction is lost.
+	]] },
+	{ name = "fLowSpeedTractionLossMult", type = "float", min = 0.0, max = 5.0, step = 0.05, category = "Traction & Grip", description = [[
+		Wheelspin at launch. 0.0 = minimal, higher = more burnout.
+	]] },
+	{ name = "fCamberStiffnesss", type = "float", min = -2.0, max = 2.0, step = 0.01, category = "Traction & Grip", description = [[
+		Drift grip modifier. &gt;0 = hold slide angle, &lt;0 = oversteer.
+	]] },
+	{ name = "fTractionBiasFront", type = "float", min = 0.01, max = 0.99, step = 0.01, category = "Traction & Grip", description = [[
+		Traction distribution: 0.01 = rear, 0.99 = front, 0.5 = equal.
+	]] },
+	{ name = "fTractionLossMult", type = "float", min = 0.0, max = 5.0, step = 0.05, category = "Traction & Grip", description = [[
+		Traction loss multiplier on non-asphalt surfaces.
+	]] },
+	{ name = "fSuspensionForce", type = "float", min = 0.0, max = 10.0, step = 0.05, category = "Suspension", description = [[
+		Suspension strength. 1 / (Force * Wheels) = lower force limit at full extension.
+	]] },
+	{ name = "fSuspensionCompDamp", type = "float", min = 0.0, max = 5.0, step = 0.05, category = "Suspension", description = [[
+		Compression damping. Bigger = stiffer.
+	]] },
+	{ name = "fSuspensionReboundDamp", type = "float", min = 0.0, max = 5.0, step = 0.05, category = "Suspension", description = [[
+		Rebound damping.
+	]] },
+	{ name = "fSuspensionUpperLimit", type = "float", min = -1.0, max = 1.0, step = 0.01, category = "Suspension", description = [[
+		Upper wheel travel limit from rest.
+	]] },
+	{ name = "fSuspensionLowerLimit", type = "float", min = -1.0, max = 0.0, step = 0.01, category = "Suspension", description = [[
+		Lower wheel travel limit from rest.
+	]] },
+	{ name = "fSuspensionRaise", type = "float", min = -1.0, max = 1.0, step = 0.01, category = "Suspension", description = [[
+		Suspension ride height offset.
+	]] },
+	{ name = "fSuspensionBiasFront", type = "float", min = 0.0, max = 1.0, step = 0.01, category = "Suspension", description = [[
+		Stiffness bias: &gt;0.5 = stiffer front, &lt;0.5 = stiffer rear.
+	]] },
+	{ name = "fAntiRollBarForce", type = "float", min = 0.0, max = 5.0, step = 0.05, category = "Suspension", description = [[
+		Anti-roll bar strength. Larger = less body roll.
+	]] },
+	{ name = "fAntiRollBarBiasFront", type = "float", min = 0.0, max = 1.0, step = 0.01, category = "Suspension", description = [[
+		Anti-roll bar bias: 0 = front, 1 = rear.
+	]] },
+	{ name = "fRollCentreHeightFront", type = "float", min = -0.5, max = 0.5, step = 0.01, category = "Suspension", description = [[
+		Front roll centre height. Larger = less rollover. Recommended ±0.15.
+	]] },
+	{ name = "fRollCentreHeightRear", type = "float", min = -0.5, max = 0.5, step = 0.01, category = "Suspension", description = [[
+		Rear roll centre height. High positive = wheelie potential. Recommended ±0.15.
+	]] },
+	{ name = "fCollisionDamageMult", type = "float", min = 0.0, max = 10.0, step = 0.1, category = "Mass & Damage", description = [[
+		Collision damage multiplier.
+	]] },
+	{ name = "fWeaponDamageMult", type = "float", min = 0.0, max = 10.0, step = 0.1, category = "Mass & Damage", description = [[
+		Weapon damage multiplier.
+	]] },
+	{ name = "fDeformationDamageMult", type = "float", min = 0.0, max = 10.0, step = 0.1, category = "Mass & Damage", description = [[
+		Deformation damage multiplier.
+	]] },
+	{ name = "fEngineDamageMult", type = "float", min = 0.0, max = 10.0, step = 0.1, category = "Mass & Damage", description = [[
+		Engine damage multiplier.
+	]] },
+	{ name = "fPetrolTankVolume", type = "float", min = 0.0, max = 100.0, step = 0.5, category = "Mass & Damage", description = [[
+		Petrol volume lost after tank damage.
+	]] },
+	{ name = "fOilVolume", type = "float", min = 0.0, max = 10.0, step = 0.1, category = "Mass & Damage", description = [[
+		Oil volume.
+	]] },
+	{ name = "fSeatOffsetDistX", type = "float", min = -2.0, max = 2.0, step = 0.01, category = "Mass & Damage", description = [[
+		Driver seat X offset (driver → passenger direction).
+	]] },
+	{ name = "fSeatOffsetDistY", type = "float", min = -2.0, max = 2.0, step = 0.01, category = "Mass & Damage", description = [[
+		Driver seat Y offset (trunk → hood direction).
+	]] },
+	{ name = "fSeatOffsetDistZ", type = "float", min = -2.0, max = 2.0, step = 0.01, category = "Mass & Damage", description = [[
+		Driver seat Z offset (undercarriage → roof direction).
+	]] },
+	{ name = "nMonetaryValue", type = "integer", min = 0, max = 2000000, step = 1000, category = "Mass & Damage" },
+}
+
+-- ── NATIVE TYPE HANDLERS ──────────────────────────────────────────
+-- These are client-only; the server uses sv_config.lua for type info.
+Config.Types = {
+	["float"] = {
+		getter = GetVehicleHandlingFloat,
+		setter = function(vehicle, _type, fieldName, value)
+			local v = tonumber(value)
+			if v == nil then error("value not a number") end
+			SetVehicleHandlingFloat(vehicle, _type, fieldName, v + 0.0)
+		end,
 	},
-	Types = {
-		["float"] = {
-			getter = GetVehicleHandlingFloat,
-			setter = function(vehicle, _type, fieldName, value)
-				local value = tonumber(value)
-				if value == nil then error("value not number") end
-
-				SetVehicleHandlingFloat(vehicle, _type, fieldName, value + 0.0)
-			end,
-		},
-		["integer"] = {
-			getter = GetVehicleHandlingInt,
-			setter = function(vehicle, _type, fieldName, value)
-				local value = tonumber(value)
-				if value == nil then error("value not number") end
-
-				SetVehicleHandlingInt(vehicle, _type, fieldName, math.floor(value))
-			end,
-		},
-		["vector"] = {
-			getter = GetVehicleHandlingVector,
-			setter = function(vehicle, _type, fieldName, value)
-				local axes = 1
-				local vector = {}
-
-				for axis in value:gmatch("([^,]+)") do
-					vector[axes] = tonumber(axis)
-					axes = axes + 1
-				end
-
-				for i = 1, 3 do
-					if vector[i] == nil then
-						error("invalid vector", i)
-					end
-				end
-
-				SetVehicleHandlingVector(vehicle, _type, fieldName, vector3(vector[1], vector[2], vector[3]))
-			end,
-		},
+	["integer"] = {
+		getter = GetVehicleHandlingInt,
+		setter = function(vehicle, _type, fieldName, value)
+			local v = tonumber(value)
+			if v == nil then error("value not a number") end
+			SetVehicleHandlingInt(vehicle, _type, fieldName, math.floor(v))
+		end,
+	},
+	["vector"] = {
+		getter = GetVehicleHandlingVector,
+		setter = function(vehicle, _type, fieldName, value)
+			local axes, vec = 1, {}
+			for axis in value:gmatch("([^,]+)") do
+				vec[axes] = tonumber(axis)
+				axes = axes + 1
+			end
+			for i = 1, 3 do
+				if vec[i] == nil then error("invalid vector axis " .. i) end
+			end
+			SetVehicleHandlingVector(vehicle, _type, fieldName, vector3(vec[1], vec[2], vec[3]))
+		end,
 	},
 }

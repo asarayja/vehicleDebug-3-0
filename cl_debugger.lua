@@ -1,17 +1,43 @@
+-- Safety net: if cl_auth.lua failed to load for any reason,
+-- define a deny-all stub so this file never crashes on ClientAuth.
+if not ClientAuth then
+	ClientAuth = { _allowed = false }
+	function ClientAuth.IsAllowed() return false end
+	function ClientAuth.ShowDenied() end
+	function ClientAuth.Gate() return false end
+	print("[VehDebug] ADVARSEL: ClientAuth mangler — cl_auth.lua lastet ikke korrekt.")
+end
+
+--[[
+	cl_debugger.lua  (Legacy UI)
+	━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+	Original vehicleDebug functionality — design and behaviour
+	preserved exactly. Access is now gated through cl_auth.lua.
+
+	ClientAuth.Gate() is called at every entry point:
+	  • +vehicleDebug keybind command
+	  • /vehdebug toggle command
+	If the player is not on the allowlist, a message is shown
+	and the action is silently blocked.
+	━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+]]
+
 Debugger = {
 	speedBuffer = {},
-	speed = 0.0,
-	accel = 0.0,
-	decel = 0.0,
-	toggle = false,
-	toggleOn = Config.EnabledByDefault
+	speed       = 0.0,
+	accel       = 0.0,
+	decel       = 0.0,
+	toggle      = false,
+	-- Only initialise as enabled if the player is allowed.
+	-- Evaluated lazily on first command call.
+	toggleOn    = false,
 }
 
 --[[ Functions ]]--
-function TruncateNumber(value)
-	value = value * Config.Precision
 
-	return (value % 1.0 > 0.5 and math.ceil(value) or math.floor(value)) / Config.Precision
+-- Local alias kept for compatibility with any call sites.
+function TruncateNumber(value)
+	return SharedHandling.TruncateNumber(value)
 end
 
 function Debugger:Set(vehicle)
@@ -20,13 +46,10 @@ function Debugger:Set(vehicle)
 
 	local handlingText = ""
 
-	-- Loop fields.
 	for key, field in pairs(Config.Fields) do
-		-- Get field type.
 		local fieldType = Config.Types[field.type]
 		if fieldType == nil then error("no field type") end
 
-		-- Get value.
 		local value = fieldType.getter(vehicle, "CHandlingData", field.name)
 		if type(value) == "vector3" then
 			value = ("%s,%s,%s"):format(value.x, value.y, value.z)
@@ -34,7 +57,6 @@ function Debugger:Set(vehicle)
 			value = TruncateNumber(value)
 		end
 
-		-- Get input.
 		local input = ([[
 			<input
 				oninput='updateHandling(this.id, this.value)'
@@ -44,13 +66,11 @@ function Debugger:Set(vehicle)
 			</input>
 		]]):format(key, value)
 
-		-- Append text.
-		handlingText = handlingText..([[
+		handlingText = handlingText .. ([[
 			<div class='tooltip'><span class='tooltip-text'>%s</span><span>%s</span>%s</div>
 		]]):format(field.description or "Unspecified.", field.name, input)
 	end
 
-	-- Update text.
 	self:Invoke("updateText", {
 		["handling-fields"] = handlingText,
 	})
@@ -59,10 +79,10 @@ end
 function Debugger:UpdateVehicle()
 	local ped = PlayerPedId()
 	local isInVehicle = IsPedInAnyVehicle(ped, false)
-	local vehicle = isInVehicle and GetVehiclePedIsIn(ped, false)
+	local vehicle     = isInVehicle and GetVehiclePedIsIn(ped, false)
 
 	if self.isInVehicle ~= isInVehicle or self.vehicle ~= vehicle then
-		self.vehicle = vehicle
+		self.vehicle    = vehicle
 		self.isInVehicle = isInVehicle
 
 		if isInVehicle and DoesEntityExist(vehicle) then
@@ -81,25 +101,18 @@ end
 function Debugger:UpdateAverages()
 	if not DoesEntityExist(self.vehicle or 0) then return end
 
-	-- Get the speed.
 	local speed = GetEntitySpeed(self.vehicle)
-
-	-- Speed buffer.
 	table.insert(self.speedBuffer, speed)
-
 	if #self.speedBuffer > 100 then
 		table.remove(self.speedBuffer, 1)
 	end
 
-	-- Calculate averages.
-	local accel = 0.0
-	local decel = 0.0
-	local accelCount = 0
-	local decelCount = 0
+	local accel, decel         = 0.0, 0.0
+	local accelCount, decelCount = 0, 0
 
 	for k, v in ipairs(self.speedBuffer) do
 		if k > 1 then
-			local change = (v - self.speedBuffer[k - 1])
+			local change = v - self.speedBuffer[k - 1]
 			if change > 0.0 then
 				accel = accel + change
 				accelCount = accelCount + 1
@@ -113,12 +126,10 @@ function Debugger:UpdateAverages()
 	accel = accel / accelCount
 	decel = decel / decelCount
 
-	-- Set tops.
 	self.speed = math.max(self.speed, speed)
 	self.accel = math.max(self.accel, accel)
 	self.decel = math.min(self.decel, decel)
 
-	-- Update text.
 	self:Invoke("updateText", {
 		["top-speed"] = self.speed * 2.236936,
 		["top-accel"] = self.accel * 60.0 * 2.236936,
@@ -127,65 +138,19 @@ function Debugger:UpdateAverages()
 end
 
 function Debugger:ResetStats()
-	self.speed = 0.0
-	self.accel = 0.0
-	self.decel = 0.0
+	self.speed       = 0.0
+	self.accel       = 0.0
+	self.decel       = 0.0
 	self.speedBuffer = {}
 end
 
 function Debugger:SetHandling(key, value)
-	if not DoesEntityExist(self.vehicle or 0) then return end
-
-	-- Get field.
-	local field = Config.Fields[key]
-	if field == nil then error("no field") end
-
-	-- Get field type.
-	local fieldType = Config.Types[field.type]
-	if fieldType == nil then error("no field type") end
-
-	-- Set field.
-	fieldType.setter(self.vehicle, "CHandlingData", field.name, value)
-
-	-- Needed for some values to work.
-	ModifyVehicleTopSpeed(self.vehicle, 1.0)
+	SharedHandling.SetFieldValue(self.vehicle, key, value)
 end
 
 function Debugger:CopyHandling()
-	local text = ""
-
-	-- Line writer.
-	local function writeLine(append)
-		if text ~= "" then
-			text = text.."\n\t\t\t"
-		end
-		text = text..append
-	end
-
-	-- Get vehicle.
-	local vehicle = self.vehicle
-	if not DoesEntityExist(vehicle) then return end
-
-	-- Loop fields.
-	for key, field in pairs(Config.Fields) do
-		-- Get field type.
-		local fieldType = Config.Types[field.type]
-		if fieldType == nil then error("no field type") end
-
-		-- Get value.
-		local value = fieldType.getter(vehicle, "CHandlingData", field.name, true)
-		local nValue = tonumber(value)
-
-		-- Append text.
-		if nValue ~= nil then
-			writeLine(("<%s value=\"%s\" />"):format(field.name, field.type == "float" and TruncateNumber(nValue) or nValue))
-		elseif field.type == "vector" then
-			writeLine(("<%s x=\"%s\" y=\"%s\" z=\"%s\" />"):format(field.name, value.x, value.y, value.z))
-		end
-	end
-
-	-- Copy text.
-	self:Invoke("copyText", text)
+	local text = SharedHandling.ExportXML(self.vehicle)
+	if text then self:Invoke("copyText", text) end
 end
 
 function Debugger:Focus(toggle)
@@ -201,8 +166,7 @@ end
 function Debugger:ToggleOn(toggleData)
 	self.toggleOn = toggleData
 	self:Invoke("toggle", toggleData)
-	
-	-- Close the UI if we're disabling
+
 	if not toggleData and self.hasFocus then
 		self:Focus(false)
 	end
@@ -218,16 +182,20 @@ function Debugger:Invoke(_type, data)
 end
 
 --[[ Threads ]]--
+
 Citizen.CreateThread(function()
 	while true do
 		Citizen.Wait(1000)
-		Debugger:UpdateVehicle()
+		-- Only poll vehicle state if the player has access and the UI is active
+		if Debugger.toggleOn then
+			Debugger:UpdateVehicle()
+		end
 	end
 end)
 
 Citizen.CreateThread(function()
 	while true do
-		if Debugger.isInVehicle then
+		if Debugger.isInVehicle and Debugger.toggleOn then
 			Citizen.Wait(0)
 			Debugger:UpdateInput()
 			Debugger:UpdateAverages()
@@ -238,8 +206,12 @@ Citizen.CreateThread(function()
 end)
 
 --[[ NUI Events ]]--
+
 RegisterNUICallback("updateHandling", function(data, cb)
 	cb(true)
+	-- NUI callbacks are client-side; player must have passed the gate
+	-- to open the UI in the first place. Guard anyway for safety.
+	if not ClientAuth.IsAllowed() then return end
 	Debugger:SetHandling(tonumber(data.key), data.value)
 end)
 
@@ -253,20 +225,35 @@ RegisterNUICallback("resetStats", function(data, cb)
 	Debugger:ResetStats()
 end)
 
---[[ Commands ]]
+--[[ Commands ]]--
+
+-- Keybind: open / close the legacy editor panel.
+-- Access gate: ClientAuth.Gate()
 RegisterCommand("+vehicleDebug", function()
+	-- UX gate: deny if not on allowlist
+	if not ClientAuth.Gate() then return end
+
+	-- Initialise toggleOn state on first allowed use
+	if Debugger.toggleOn == nil then
+		Debugger.toggleOn = Config.EnabledByDefault
+	end
+
 	if Debugger.toggleOn == false then return end
 	Debugger:Focus(not Debugger.hasFocus)
 end, true)
 
 RegisterKeyMapping("+vehicleDebug", "Vehicle Debugger", "keyboard", Config.Keybind)
 
+-- /vehdebug: toggle legacy UI on/off.
 RegisterCommand("vehdebug", function()
+	if not ClientAuth.Gate() then return end
+
 	Debugger.toggleOn = not Debugger.toggleOn
 	Debugger:ToggleOn(Debugger.toggleOn)
+
 	TriggerEvent('chat:addMessage', {
-		color = {255, 255, 0},
+		color     = { 255, 255, 0 },
 		multiline = true,
-		args = {"Vehicle Debugger", Debugger.toggleOn and "Enabled" or "Disabled"}
+		args      = { "Vehicle Debugger", Debugger.toggleOn and "Aktivert" or "Deaktivert" },
 	})
 end, false)
